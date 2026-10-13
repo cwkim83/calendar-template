@@ -3,6 +3,8 @@
 서버도, 가입도, 설치도 없이 **`index.html` 파일 하나**(+ 날짜 계산 `cal.js`)로 쓰는 월간·주간 일정 달력입니다.
 브라우저에서 열면 바로 쓰고, 고치고 싶은 곳은 [Claude Code](https://claude.com/claude-code)에게 말로 시키면 됩니다.
 
+📖 만드는 법(바이브 코딩, 따라 하기 21편): https://crazy4eu.com/howto/21-calendar · ▶ 영상: https://youtu.be/9Q1aSa3HU0A
+
 > 이 달력은 「나의 AI 비서 Sancho」 강좌(https://github.com/cwkim83/my-agent-Sancho)에서 AI 비서가 일정을 대신 적어 주던 화면을, 데이터와 서버를 걷어내고 혼자 쓸 수 있게 떼어 낸 것입니다.
 
 - **월 보기**(4~6줄, 다른 달 날짜는 흐리게, 오늘 강조, 칸이 차면 「+N개 더」 → 그 주 보기) / **주 보기**(7칸) 전환, ◀ ▶ 오늘
