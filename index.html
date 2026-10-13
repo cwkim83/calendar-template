@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>일정 달력 템플릿</title>
+<!-- 일정 달력 템플릿 · © 2026 crazy4eu (cwkim83) · 라이선스는 LICENSE 파일 참고 -->
+<style>
+  :root { --line: #e4e7eb; --bg: #f5f6f8; --text: #1b1f24; --sub: #667085; --blue: #2f6fed; --blue-bg: #eaf1ff; --red: #b42318; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; display: flex; flex-direction: column; background: var(--bg); color: var(--text);
+    font: 14px/1.5 "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif; }
+  button, input, select, textarea { font: inherit; }
+  button { cursor: pointer; }
+  [hidden] { display: none !important; }
+
+  /* 위쪽 줄: 이전·오늘·다음 · 제목 · 월/주 */
+  .bar { flex: none; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 10px 16px; background: #fff; border-bottom: 1px solid var(--line); }
+  .bar h1 { margin: 0 8px 0 4px; font-size: 18px; font-weight: 700; }
+  .btn { padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: #344054; }
+  .btn:hover { background: #f2f4f7; }
+  .sp { flex: 1; }
+  .seg { display: flex; }
+  .seg button { padding: 6px 14px; border: 1px solid var(--line); background: #fff; color: #344054; }
+  .seg button:first-child { border-radius: 8px 0 0 8px; } .seg button:last-child { border-radius: 0 8px 8px 0; border-left: 0; }
+  .seg button.on { background: var(--blue-bg); border-color: var(--blue); color: var(--blue); font-weight: 600; }
+
+  /* 건너뛴 항목·불러오기 실패 알림 */
+  #warn { flex: none; margin: 8px 16px 0; padding: 8px 12px; border: 1px solid #fecdca; border-radius: 8px; background: #fef3f2; color: var(--red); font-size: 13px; }
+  #warn:empty { display: none; }
+  #warn .wt { display: flex; align-items: flex-start; gap: 8px; font-weight: 600; }
+  #warn .wt span { flex: 1; }
+  #warn .x { flex: none; padding: 0 8px; border: 1px solid #fecdca; border-radius: 6px; background: #fff; color: var(--red); font-size: 12px; }
+  #warn ul { margin: 4px 0 0; padding-left: 18px; max-height: 9em; overflow: auto; font-weight: 400; }
+
+  #view { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; padding: 12px 16px 16px; }
+  .sat { color: var(--blue); } .sun { color: var(--red); }
+
+  /* 월 보기 */
+  .dows { flex: none; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); text-align: center; color: var(--sub); font-size: 13px; padding-bottom: 4px; }
+  .month { flex: 1; min-width: 560px; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .cell { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 4px 6px; overflow: hidden; background: #fff; cursor: pointer; }
+  .cell:hover { background: #fbfcfe; }
+  .cell.out { background: #fafbfc; color: var(--sub); }
+  .dn { display: flex; align-items: center; justify-content: space-between; gap: 4px; min-height: 22px; }
+  .n { display: inline-block; min-width: 22px; height: 22px; line-height: 22px; text-align: center; border-radius: 999px; font-size: 13px; }
+  .today .n { background: var(--blue); color: #fff; font-weight: 700; }
+
+  .ev { display: block; width: 100%; padding: 1px 6px; border: 0; border-left: 3px solid; border-radius: 4px; text-align: left; font-size: 12px; line-height: 1.55;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ev b { font-weight: 600; }
+  /* 일정 종류별 색 — 종류를 더하려면 KINDS·KCLASS(아래 script)와 여기 한 줄씩 */
+  .k-meet { background: #eaf1ff; border-color: #2f6fed; color: #1d4ed8; }
+  .k-trip { background: #e7f6ec; border-color: #12a150; color: #0b6b36; }
+  .k-insp { background: #fff1e0; border-color: #f08a24; color: #9a4d00; }
+  .k-me { background: #f1ebfd; border-color: #8b5cf6; color: #5b34b5; }
+  .k-other { background: #f2f4f7; border-color: #98a2b3; color: #475467; }
+  .more { align-self: flex-start; padding: 0 6px; border: 0; background: none; color: var(--sub); font-size: 12px; }
+  .more:hover { color: var(--blue); }
+
+  /* 주 보기 */
+  .week { flex: 1; min-width: 720px; min-height: 340px; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .wcol { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 8px; overflow-y: auto; background: #fff; cursor: pointer; }
+  .wh { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+  .wev { display: flex; flex-direction: column; gap: 1px; width: 100%; padding: 5px 8px; border: 0; border-left: 3px solid; border-radius: 6px; text-align: left; font-size: 13px; }
+  .wev b { font-size: 12px; } .wev small { font-size: 12px; opacity: .8; }
+  .none { color: #98a2b3; font-size: 12px; }
+
+  /* 아래 줄: 저장 상태 · 예시 · 내보내기/불러오기 */
+  .tools { flex: none; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 8px 16px; background: #fff; border-top: 1px solid var(--line); }
+  .stat { color: var(--sub); font-size: 12px; }
+  .stat.bad { color: var(--red); font-weight: 600; }
+  footer { flex: none; padding: 6px 16px 10px; background: #fff; color: #98a2b3; font-size: 11px; text-align: center; }
+
+  /* 일정 창 */
+  dialog { width: min(440px, calc(100% - 24px)); padding: 0; border: 0; border-radius: 14px; box-shadow: 0 12px 40px rgba(0, 0, 0, .25); color: var(--text); }
+  dialog::backdrop { background: rgba(16, 24, 40, .4); }
+  form { display: flex; flex-direction: column; gap: 10px; padding: 18px 20px; }
+  form h3 { margin: 0; font-size: 17px; }
+  label { display: flex; flex-direction: column; gap: 3px; min-width: 0; font-size: 13px; color: var(--sub); }
+  .r2 { display: flex; gap: 10px; }
+  .r2 label { flex: 1; }
+  input, select, textarea { width: 100%; padding: 7px 9px; border: 1px solid #d0d5dd; border-radius: 8px; background: #fff; color: var(--text); }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(47, 111, 237, .12); }
+  .err { min-height: 1.2em; color: var(--red); font-size: 13px; }
+  .btns { display: flex; align-items: center; gap: 8px; }
+  .primary { padding: 7px 18px; border: 0; border-radius: 8px; background: var(--blue); color: #fff; font-weight: 600; }
+  .danger { padding: 7px 14px; border: 1px solid #fecdca; border-radius: 8px; background: #fff; color: var(--red); }
+  .danger:hover { background: #fee4e2; }
+
+  /* 휴대폰: 옆으로 밀지 않고 한 화면에. 월 = 날짜 칸에 색 줄만 (날짜를 누르면 그 주 목록으로), 주 = 세로 목록 */
+  .addbtn { display: none; }
+  @media (max-width: 640px) {
+    .bar { padding: 8px 10px; gap: 6px; }
+    .bar h1 { font-size: 15px; margin: 0 2px; }
+    .bar .btn { padding: 6px 9px; }
+    .seg button { padding: 6px 11px; }
+    .addbtn { display: block; border-color: var(--blue); color: var(--blue); font-weight: 700; }
+    #warn { margin: 8px 10px 0; }
+    #view { padding: 8px 10px 12px; }
+    .month { min-width: 0; grid-template-rows: none !important; grid-auto-rows: minmax(58px, 1fr); }
+    .cell { align-items: stretch; padding: 3px 2px; }
+    .dn { flex-direction: column; justify-content: flex-start; gap: 1px; min-height: 0; }
+    .ev { height: 0; padding: 0; border: 0; border-top: 4px solid; border-radius: 2px; background: none; font-size: 0; pointer-events: none; } /* 일정은 종류별 색 줄로 (줄 색 = 종류의 글자색, 내용은 주 목록에서) */
+    .more { padding: 0; font-size: 10px; white-space: nowrap; text-align: center; align-self: center; pointer-events: none; }
+    .week { flex: none; min-width: 0; min-height: 0; grid-template-columns: 1fr; } /* 날짜 칸이 내용만큼 늘어나고, 화면이 모자라면 #view 가 통째로 스크롤 */
+    .wcol { padding: 10px 12px; overflow: visible; }
+    .wev { padding: 8px 10px; }
+    .tools { padding: 8px 10px; gap: 6px; }
+    .stat { flex-basis: 100%; }
+    input, select, textarea { font-size: 16px; } /* 15px 이하면 아이폰이 입력할 때 화면을 확대한다 */
+  }
+</style>
+</head>
+<body>
+  <div class="bar">
+    <button class="btn" id="prev" aria-label="이전">◀</button>
+    <button class="btn" id="today">오늘</button>
+    <button class="btn" id="next" aria-label="다음">▶</button>
+    <h1 id="title"></h1>
+    <div class="seg"><button data-view="month">월</button><button data-view="week">주</button></div>
+    <button class="btn addbtn" id="add" aria-label="일정 추가">＋ 추가</button>
+  </div>
+  <div id="warn"></div>
+  <div id="view"></div>
+
+  <div class="tools">
+    <span class="stat" id="stat"></span><span class="sp"></span>
+    <button class="btn" id="sample">🧪 예시 넣기</button>
+    <button class="btn" id="exp">📥 JSON 내보내기</button>
+    <button class="btn" id="imp">📤 JSON 불러오기</button>
+    <input type="file" id="file" accept=".json,application/json" hidden>
+  </div>
+  <footer>일정 달력 템플릿 · © 2026 crazy4eu (cwkim83) · 데이터는 이 브라우저에만 저장됩니다 · 백업은 「JSON 내보내기」</footer>
+
+  <dialog id="dlg">
+    <form id="f">
+      <h3 id="dlgTitle">일정 추가</h3>
+      <label>제목 <input name="title" maxlength="100" autocomplete="off"></label>
+      <div class="r2">
+        <label>날짜 <input type="date" name="date"></label>
+        <label>종료 날짜 (여러 날이면) <input type="date" name="endDate"></label>
+      </div>
+      <div class="r2">
+        <label>시작 시각 <input type="time" name="start"></label>
+        <label>끝 시각 <input type="time" name="end"></label>
+      </div>
+      <label>종류 <select name="kind"></select></label>
+      <label>장소 <input name="place" maxlength="100" autocomplete="off"></label>
+      <label>메모 <textarea name="memo" rows="3"></textarea></label>
+      <div class="err" id="err"></div>
+      <div class="btns">
+        <button type="button" class="danger" id="del">삭제</button><span class="sp"></span>
+        <button type="button" class="btn" id="cancel">취소</button><button type="submit" class="primary">저장</button>
+      </div>
+    </form>
+  </dialog>
+
+<script src="cal.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const KINDS = ['회의', '출장', '검사 입회', '개인'];
+  const KCLASS = { '회의': 'meet', '출장': 'trip', '검사 입회': 'insp', '개인': 'me' };
+  const DOW = ['월', '화', '수', '목', '금', '토', '일'];
+  const KEY = 'calendar_template_v1'; // localStorage 칸 이름 (이 브라우저에만 저장)
+  const qs = new URLSearchParams(location.search);
+  const preview = qs.get('sample') === '1'; // ?sample=1 — 예시를 보기만 하고 저장하지 않는다
+  const newId = () => (crypto.randomUUID ? crypto.randomUUID() : 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8));
+
+  let mode = qs.get('view') === 'week' ? 'week' : 'month', cursor = cal.ymd(new Date());
+  let events = [], editing = null, notice = null, storeErr = '', statText = '';
+
+  // ---------- 저장: localStorage 에 일정 목록을 통째로 (바뀔 때마다) ----------
+  function loadStore() {
+    let raw;
+    try { localStorage.setItem(KEY + '_probe', '1'); localStorage.removeItem(KEY + '_probe'); raw = localStorage.getItem(KEY); } // 막혀 있으면 여기서 바로 알린다
+    catch (e) { storeErr = `이 브라우저가 저장을 막고 있어요 (${e.message || e}). 새로고침하면 사라지니 「JSON 내보내기」로 백업하세요.`; return []; }
+    if (!raw) return [];
+    const r = cal.parseFile(raw);
+    if (r.error) { // 깨진 저장분은 덮어쓰기 전에 따로 보관
+      try { localStorage.setItem(KEY + '_broken_' + Date.now(), raw); } catch (e) { /* 보관 실패해도 아래 알림은 띄운다 */ }
+      notice = { head: '⚠ 저장돼 있던 데이터를 읽지 못해 빈 달력으로 시작해요', lines: [r.error, `원본은 localStorage 의 "${KEY}_broken_…" 칸에 보관했어요.`] };
+      return [];
+    }
+    if (r.skipped.length) notice = { head: `⚠ 저장돼 있던 데이터 중 형식이 맞지 않아 건너뛴 항목 ${r.skipped.length}개`, lines: r.skipped };
+    return r.ok;
+  }
+  function save() {
+    if (preview) return setStatus('미리보기 — 저장되지 않습니다');
+    try {
+      localStorage.setItem(KEY, JSON.stringify({ format: cal.FORMAT, ver: 1, events, savedAt: Date.now() }));
+      storeErr = ''; setStatus('저장됨 ' + new Date().toTimeString().slice(0, 5));
+    } catch (e) { // 삼키지 않는다: 빨간 글씨로 남겨 둔다 (다음 저장이 되면 사라짐)
+      storeErr = `저장하지 못했어요 (${e.message || e}). 지금 「JSON 내보내기」로 백업해 두세요.`; setStatus();
+    }
+  }
+  function setStatus(t) {
+    if (t !== undefined) statText = t;
+    $('stat').textContent = storeErr ? '⚠ ' + storeErr : statText;
+    $('stat').classList.toggle('bad', !!storeErr);
+  }
+
+  // ---------- 내보내기 · 불러오기 · 예시 ----------
+  $('exp').onclick = () => {
+    const a = document.createElement('a'), url = URL.createObjectURL(new Blob([cal.toFile(events)], { type: 'application/json' }));
+    a.href = url; a.download = `일정달력_${cal.ymd(new Date())}.json`;
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  };
+  $('imp').onclick = () => { $('file').value = ''; $('file').click(); };
+  $('file').onchange = async (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    let r;
+    try { r = cal.parseFile(await f.text()); } catch (x) { r = { error: `파일을 읽지 못했어요 (${x.message}).` }; }
+    if (r.error) { // 이 달력 파일이 아님: 지금 데이터는 그대로 둔다
+      notice = { head: '⚠ 불러오지 못했어요 — 지금 일정은 그대로예요', lines: [`${f.name}: ${r.error}`] };
+      return renderWarn();
+    }
+    const skip = r.skipped.length ? ` (형식이 맞지 않아 건너뛸 항목 ${r.skipped.length}개는 따로 알려 드려요)` : '';
+    if (!confirm(`파일: ${f.name}\n불러올 일정 ${r.ok.length}개${skip}\n\n지금 일정 ${events.length}개는 파일 내용으로 교체돼요. 계속할까요?`)) return;
+    events = r.ok;
+    notice = r.skipped.length ? { head: `⚠ ${f.name} 에서 형식이 맞지 않아 건너뛴 항목 ${r.skipped.length}개 (원본 파일은 그대로예요)`, lines: r.skipped } : null;
+    save(); render();
+  };
+  $('sample').onclick = () => {
+    if (events.length && !confirm(`지금 일정 ${events.length}개가 가상의 예시로 교체돼요. 계속할까요?\n(먼저 「JSON 내보내기」로 백업해 두면 안전해요)`)) return;
+    events = cal.sample(cal.ymd(new Date())); notice = null; cursor = cal.ymd(new Date());
+    save(); render();
+  };
+
+  // ---------- 그리기 ----------
+  const tip = (e) => `${e.start || '종일'}${e.end ? '~' + e.end : ''} ${e.title || ''}${e.place ? ' · ' + e.place : ''}`;
+  const kcls = (e) => 'k-' + (KCLASS[e.kind] || 'other');
+  const chip = (e) => `<button class="ev ${kcls(e)}" data-id="${esc(e.id)}" title="${esc(tip(e))}">${e.start ? `<b>${esc(e.start)}</b> ` : ''}${esc(e.title)}</button>`;
+
+  function monthHtml(today) {
+    const weeks = cal.monthGrid(cursor), month = cursor.slice(0, 7);
+    const cells = weeks.flat().map((day, i) => {
+      const evs = cal.eventsOn(events, day), shown = evs.slice(0, 3), more = evs.length - shown.length;
+      return `<div class="cell ${day.slice(0, 7) !== month ? 'out' : ''} ${day === today ? 'today' : ''}" data-day="${day}">
+        <div class="dn"><span class="n ${i % 7 === 5 ? 'sat' : i % 7 === 6 ? 'sun' : ''}">${Number(day.slice(8))}</span></div>
+        ${shown.map(chip).join('')}${more > 0 ? `<button class="more" data-more="${day}">+${more}개 더</button>` : ''}</div>`;
+    }).join('');
+    return `<div class="dows">${DOW.map((d, i) => `<div class="${i === 5 ? 'sat' : i === 6 ? 'sun' : ''}">${d}</div>`).join('')}</div>
+      <div class="month" style="grid-template-rows:repeat(${weeks.length},minmax(96px,1fr))">${cells}</div>`;
+  }
+
+  function weekHtml(today) {
+    return `<div class="week">${cal.weekDays(cursor).map((day, i) => {
+      const evs = cal.eventsOn(events, day);
+      return `<div class="wcol ${day === today ? 'today' : ''}" data-day="${day}">
+        <div class="wh ${i === 5 ? 'sat' : i === 6 ? 'sun' : ''}">${DOW[i]} <span class="n">${Number(day.slice(8))}</span></div>
+        ${evs.map((e) => `<button class="wev ${kcls(e)}" data-id="${esc(e.id)}"><b>${esc(e.start || '종일')}${e.end ? '~' + esc(e.end) : ''}</b>${esc(e.title)}${e.place ? `<small>${esc(e.place)}</small>` : ''}</button>`).join('')}
+        ${evs.length ? '' : '<div class="none">일정 없음</div>'}</div>`;
+    }).join('')}</div>`;
+  }
+
+  function titleText() {
+    if (mode === 'month') { const [y, m] = cursor.split('-'); return `${y}년 ${Number(m)}월`; }
+    const w = cal.weekDays(cursor), [y1, m1, d1] = w[0].split('-').map(Number), [y2, m2, d2] = w[6].split('-').map(Number);
+    return `${y1}년 ${m1}월 ${d1}일 – ${y2 !== y1 ? y2 + '년 ' : ''}${m2 !== m1 ? m2 + '월 ' : ''}${d2}일`;
+  }
+  // 건너뛴 항목·실패 알림: 사용자가 적은 글자가 들어가므로 textContent 로만 넣는다 (innerHTML 안 씀)
+  function renderWarn() {
+    const w = $('warn');
+    w.textContent = '';
+    if (!notice) return;
+    const t = document.createElement('div'), s = document.createElement('span'), x = document.createElement('button'), ul = document.createElement('ul');
+    t.className = 'wt'; s.textContent = notice.head; x.className = 'x'; x.type = 'button'; x.textContent = '닫기';
+    x.onclick = () => { notice = null; renderWarn(); };
+    t.append(s, x);
+    notice.lines.forEach((l) => { const li = document.createElement('li'); li.textContent = l; ul.append(li); });
+    w.append(t, ul);
+  }
+  function render() {
+    const today = cal.ymd(new Date());
+    $('title').textContent = titleText();
+    document.querySelectorAll('.seg button').forEach((b) => b.classList.toggle('on', b.dataset.view === mode));
+    renderWarn();
+    $('view').innerHTML = mode === 'month' ? monthHtml(today) : weekHtml(today);
+  }
+
+  // ---------- 누르기 ----------
+  $('view').onclick = (e) => {
+    const ev = e.target.closest('[data-id]'); // 일정 → 수정·삭제
+    if (ev) return openDlg(events.find((x) => String(x.id) === ev.dataset.id));
+    const more = e.target.closest('[data-more]'); // "+n개 더" → 그 날이 든 주 보기
+    if (more) { mode = 'week'; cursor = more.dataset.more; return render(); }
+    const cell = e.target.closest('[data-day]'); // 빈 칸 → 일정 추가 (폰의 월 보기에서는 그 날이 든 주 목록으로)
+    if (!cell) return;
+    if (mode === 'month' && matchMedia('(max-width: 640px)').matches) { mode = 'week'; cursor = cell.dataset.day; return render(); }
+    openDlg(null, cell.dataset.day);
+  };
+  $('add').onclick = () => { // 폰에서는 빈 칸을 누르면 주 목록으로 가므로 추가 단추가 따로 있다: 보고 있는 주에 오늘이 있으면 오늘, 아니면 그 주의 날짜
+    const today = cal.ymd(new Date());
+    openDlg(null, mode === 'week' && !cal.weekDays(cursor).includes(today) ? cursor : today);
+  };
+  document.querySelectorAll('.seg button').forEach((b) => (b.onclick = () => { mode = b.dataset.view; render(); }));
+  $('prev').onclick = () => { cursor = mode === 'month' ? cal.addMonths(cursor, -1) : cal.addDays(cursor, -7); render(); };
+  $('next').onclick = () => { cursor = mode === 'month' ? cal.addMonths(cursor, 1) : cal.addDays(cursor, 7); render(); };
+  $('today').onclick = () => { cursor = cal.ymd(new Date()); render(); };
+
+  // ---------- 일정 추가·수정·삭제 창 ----------
+  const field = (n) => $('f').elements[n];
+  function openDlg(ev, day) {
+    editing = ev || null;
+    const e = ev || { date: day, start: '09:00', end: '10:00', kind: KINDS[0] };
+    const kinds = KINDS.includes(e.kind) || !e.kind ? KINDS : [...KINDS, e.kind]; // 불러온 파일에 있던 다른 종류도 잃지 않는다
+    $('dlgTitle').textContent = ev ? '일정 수정' : '일정 추가';
+    field('kind').innerHTML = kinds.map((k) => `<option>${esc(k)}</option>`).join('');
+    for (const n of ['title', 'date', 'start', 'end', 'kind', 'place', 'memo']) field(n).value = e[n] ?? '';
+    field('endDate').value = e.endDate && e.endDate !== e.date ? e.endDate : '';
+    $('del').hidden = !ev;
+    $('err').textContent = '';
+    $('dlg').showModal();
+    field('title').focus();
+  }
+  $('cancel').onclick = () => $('dlg').close();
+  $('f').onsubmit = (e) => {
+    e.preventDefault();
+    const form = Object.fromEntries(new FormData($('f')));
+    const problem = cal.validate(form);
+    if (problem) { $('err').textContent = problem; return; }
+    const ev = cal.toEvent(editing, form, newId()), i = editing ? events.indexOf(editing) : -1;
+    if (i >= 0) events[i] = ev; else events.push(ev);
+    $('dlg').close(); save(); render();
+  };
+  $('del').onclick = () => {
+    if (!confirm(`이 일정을 지울까요?\n\n${editing.title}`)) return;
+    events = events.filter((x) => x !== editing);
+    $('dlg').close(); save(); render();
+  };
+
+  // ---------- 시작 ----------
+  if (preview) { events = cal.sample(cal.ymd(new Date())); setStatus('미리보기 — 저장되지 않습니다'); }
+  else { events = loadStore(); setStatus('자동 저장 — 바꿀 때마다 이 브라우저에 저장돼요'); }
+  render();
+</script>
+</body>
+</html>
