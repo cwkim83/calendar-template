@@ -161,8 +161,8 @@
 <script>
   const $ = (id) => document.getElementById(id);
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const KINDS = ['회의', '출장', '검사 입회', '개인'];
-  const KCLASS = { '회의': 'meet', '출장': 'trip', '검사 입회': 'insp', '개인': 'me' };
+  const KINDS = ['회의', '출장', '외근', '개인'];
+  const KCLASS = { '회의': 'meet', '출장': 'trip', '외근': 'insp', '개인': 'me' };
   const DOW = ['월', '화', '수', '목', '금', '토', '일'];
   const KEY = 'calendar_template_v1'; // localStorage 칸 이름 (이 브라우저에만 저장)
   const qs = new URLSearchParams(location.search);
